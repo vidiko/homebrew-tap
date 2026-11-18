@@ -87,7 +87,7 @@ flowchart TD
   job["homebrew-tap job"]:::step
   same{"Same formula in tap?"}:::decide
   unchanged["Left alone"]:::step
-  pr["PR vmafx-&lt;version&gt; on tap"]:::step
+  pr["PR vmafx-#lt;version#gt; on tap"]:::step
   checks["Required checks"]:::step
   merge["Merge: Formula/vmafx.rb<br/>on main"]:::step
   install["brew install<br/>Vidiko/tap/vmafx"]:::input
