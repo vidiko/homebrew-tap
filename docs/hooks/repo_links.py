@@ -185,7 +185,7 @@ class RepoLinksExtension(Extension):
             return self._docs_relative_href(repo_path, page_dir, parts, suffix)
         return self._forge_href(href, repo_path, suffix)
 
-    def extendMarkdown(self, md: Markdown) -> None:  # noqa: N802
+    def extendMarkdown(self, md: Markdown) -> None:
         """Register the link-rewriting treeprocessor at priority 15."""
         md.treeprocessors.register(_RepoLinksTreeprocessor(md, self), "repo_links", 15)
 
