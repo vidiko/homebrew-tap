@@ -86,15 +86,15 @@ flowchart TD
   tag["Final VMAFx tag"]:::input
   job["homebrew-tap job"]:::step
   same{"Same formula in tap?"}:::decide
-  unchanged["Left alone"]:::step
   pr["PR vmafx-#lt;version#gt; on tap"]:::step
   checks["Required checks"]:::step
   merge["Merge: Formula/vmafx.rb<br/>on main"]:::step
   install["brew install<br/>Vidiko/tap/vmafx"]:::input
+  unchanged["Left alone"]:::step
 
   tag --> job --> same
-  same -->|yes| unchanged
   same -->|no| pr --> checks --> merge --> install
+  same -->|yes| unchanged
 ```
 
 ## 📚 Guides and reference
