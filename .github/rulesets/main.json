@@ -47,6 +47,9 @@
             "context": "Verification gate"
           },
           {
+            "context": "Docs build"
+          },
+          {
             "context": "REUSE lint"
           }
         ],
