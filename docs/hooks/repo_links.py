@@ -20,17 +20,21 @@ from __future__ import annotations
 import logging
 import os
 import posixpath
+import shutil
 import subprocess
 import urllib.parse
 from collections.abc import Iterable, Mapping
 from pathlib import Path, PurePosixPath
-from typing import Any
-from xml.etree.ElementTree import Element
+from typing import TYPE_CHECKING, Any
 
 from markdown import Markdown
 from markdown.extensions import Extension
 from markdown.treeprocessors import Treeprocessor
 from mkdocs.exceptions import PluginError
+
+if TYPE_CHECKING:
+    # Type only: Python-Markdown builds the element tree; the hook parses no XML.
+    from xml.etree.ElementTree import Element
 
 _LOG = logging.getLogger("mkdocs.hooks.repo_links")
 
@@ -46,9 +50,12 @@ def _forge_ref(config: Mapping[str, Any]) -> tuple[str, str]:
 
 def _tracked_files(repo_root: Path) -> frozenset[str]:
     """Return the repository's tracked file paths from git ls-files -z."""
+    git = shutil.which("git")
+    if git is None:
+        raise PluginError("repo_links: git is not on PATH")
     try:
         proc = subprocess.run(
-            ["git", "ls-files", "-z"],
+            [git, "ls-files", "-z"],
             cwd=repo_root,
             capture_output=True,
             timeout=30,

@@ -11,7 +11,7 @@ import importlib.util
 import logging
 import sys
 import types
-import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -106,6 +106,43 @@ class _ListHandler(logging.Handler):
         self.messages.append(record.getMessage())
 
 
+class _HtmlCollector(HTMLParser):
+    """Collect anchor hrefs, image sources and code text from rendered HTML."""
+
+    def __init__(self) -> None:
+        """Start with no collected hrefs, sources or code text."""
+        super().__init__(convert_charrefs=True)
+        self.hrefs: list[str] = []
+        self.srcs: list[str] = []
+        self.codes: list[str] = []
+        self._code_depth = 0
+        self._code_text: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """Record a link target, an image source, or the start of a code span."""
+        values = dict(attrs)
+        if tag == "a":
+            self.hrefs.append(values.get("href") or "")
+        elif tag == "img":
+            self.srcs.append(values.get("src") or "")
+        elif tag == "code":
+            if self._code_depth == 0:
+                self._code_text = []
+            self._code_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        """Close a code span and store its text once the outermost one ends."""
+        if tag == "code" and self._code_depth > 0:
+            self._code_depth -= 1
+            if self._code_depth == 0:
+                self.codes.append("".join(self._code_text).strip())
+
+    def handle_data(self, data: str) -> None:
+        """Keep text that sits inside a code span."""
+        if self._code_depth > 0:
+            self._code_text.append(data)
+
+
 def _run_case(
     page_uri: str,
     edit_uri: str,
@@ -131,10 +168,12 @@ def _run_case(
         html = md.convert(md_input)
     finally:
         logger.removeHandler(handler)
-    root = ET.fromstring(f"<root>{html}</root>")
-    got_hrefs = [a.get("href", "") for a in root.iter("a")]
-    got_srcs = [img.get("src", "") for img in root.iter("img")]
-    got_codes = ["".join(code.itertext()).strip() for code in root.iter("code")]
+    collector = _HtmlCollector()
+    collector.feed(html)
+    collector.close()
+    got_hrefs = collector.hrefs
+    got_srcs = collector.srcs
+    got_codes = collector.codes
     code_ok = True if want_hrefs else got_codes == ["[a](../CONTRIBUTING.md)"]
     ok = (
         got_hrefs == want_hrefs
