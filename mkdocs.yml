@@ -82,8 +82,11 @@ plugins:
 
 # Rewrite relative Markdown links that leave docs/ (such as ../CONTRIBUTING.md)
 # to repository blob URLs on main, and warn when a target file does not exist.
+# Warn when a page's front matter is not a YAML mapping: MkDocs drops the
+# parse error and leaves the block in the page body.
 hooks:
   - docs/hooks/repo_links.py
+  - docs/hooks/front_matter.py
 
 exclude_docs: |
   /overrides/

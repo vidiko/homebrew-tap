@@ -1,5 +1,5 @@
 ---
-description: Homebrew tap of the Vidiko organisation: formulae for VMAFx.
+description: "Homebrew tap of the Vidiko organisation: formulae for VMAFx."
 ---
 
 # homebrew-tap
