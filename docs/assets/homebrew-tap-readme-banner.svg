@@ -1,0 +1,26 @@
+<!--
+SPDX-FileCopyrightText: 2026 Lusoris <lusoris@pm.me>
+SPDX-License-Identifier: EUPL-1.2
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" width="1200" height="120" role="img" aria-labelledby="t d">
+  <title id="t">homebrew-tap</title>
+  <desc id="d">homebrew-tap: Homebrew formulae for VMAFx in the Vidiko organisation.</desc>
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <clipPath id="card">
+      <rect x="0" y="0" width="1200" height="120" rx="14" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#card)">
+    <rect x="0" y="0" width="1200" height="120" rx="14" fill="#0b1020" />
+    <rect x="0" y="0" width="8" height="120" fill="url(#accent)" />
+    <path d="M 1060 30 C 1100 30, 1115 58, 1145 58 C 1165 58, 1178 46, 1192 46" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-opacity="0.35" stroke-linecap="round" />
+    <path d="M 1060 70 C 1100 70, 1115 96, 1145 96 C 1165 96, 1178 84, 1192 84" fill="none" stroke="#3b82f6" stroke-width="2" stroke-opacity="0.35" stroke-linecap="round" />
+    <text x="48" y="74" fill="#e2e8f0" font-family="ui-sans-serif, Segoe UI, Helvetica, Arial, sans-serif" font-size="56" font-weight="700">homebrew-tap</text>
+    <text x="510" y="52" fill="#94a3b8" font-family="ui-sans-serif, Segoe UI, Helvetica, Arial, sans-serif" font-size="20">Homebrew formulae for VMAFx</text>
+    <text x="510" y="82" fill="#94a3b8" font-family="ui-sans-serif, Segoe UI, Helvetica, Arial, sans-serif" font-size="20">Vidiko organisation</text>
+  </g>
+</svg>
