@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: EUPL-1.2
 ---
 # Verification gate: runs `make verify-all`, the same target a contributor
-# runs locally, and checks that every commit carries a sign-off. It is the
-# required status check of the main ruleset, next to the local hooks.
+# runs locally, and on a pull request checks that every commit other than a
+# merge commit carries a sign-off. It is a required status check of the main
+# ruleset. This workflow is the repository's own: the Praetor adoption
+# installs only the local hooks, which run the same target.
 #
 # The job runs on a hosted runner until a cluster runner scale set exists for
 # this repository. The standards engine is built here from one pinned commit

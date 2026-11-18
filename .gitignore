@@ -3,6 +3,7 @@ bin/
 *.out
 .DS_Store
 /site/
+__pycache__/
 
 # BEGIN praetor private artifacts (praetorctl adopt)
 .workingdir/
