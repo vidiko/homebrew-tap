@@ -1,9 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Lusoris <lusoris@pm.me>
 # SPDX-License-Identifier: EUPL-1.2
-"""Positive, negative and boundary cases for docs/hooks/front_matter.py.
+"""Test docs/hooks/front_matter.py."""
 
-Run from the repository root: python3 -I -B docs/hooks/test_front_matter.py .
-"""
+# Run from the repository root: python3 -I -B docs/hooks/test_front_matter.py .
 
 from __future__ import annotations
 
@@ -12,6 +11,8 @@ import logging
 import sys
 import types
 from pathlib import Path
+
+from mkdocs.utils.meta import get_data
 
 ROOT = Path(sys.argv[1]).resolve()
 SPEC = importlib.util.spec_from_file_location(
@@ -22,10 +23,16 @@ if SPEC is None or SPEC.loader is None:
 MOD = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MOD)
 
-# (case name, Markdown the hook receives after MkDocs read the page, warnings).
-# MkDocs strips a block it read, so a read page reaches the hook without one.
+# (case name, raw page source, warnings).
 CASES: list[tuple[str, str, int]] = [
-    ("read front matter, block stripped", "# Title\n", 0),
+    ("read front matter, block stripped", "---\ntitle: Title\n---\n\n# Title\n", 0),
+    (
+        "valid metadata then thematic breaks",
+        "---\ntitle: T\n---\n\n---\n\nIntro\n\n---\n",
+        0,
+    ),
+    ("valid metadata and thematic-break body", "---\ntitle: T\n---\n---\nx\n---\n", 0),
+    ("file unreadable", "# Title\n", 1),
     ("no front matter", "# Title\n\ntext\n", 0),
     (
         "unquoted colon in value",
@@ -33,6 +40,7 @@ CASES: list[tuple[str, str, int]] = [
         1,
     ),
     ("block is a string", "---\njust text\n---\n\n# T\n", 1),
+    ("invalid date", "---\ndate: 2026-13-45\n---\n\n# T\n", 1),
     ("empty block", "---\n\n---\n\n# T\n", 1),
     ("no closing line", "---\ndescription: a: b\n\n# T\n", 0),
     ("thematic break after a heading", "# T\n\n---\n\ntext\n---\n", 0),
@@ -52,22 +60,42 @@ class _ListHandler(logging.Handler):
         self.messages.append(record.getMessage())
 
 
+class _UnreadableFile:
+    """Represent a page whose source cannot be read."""
+
+    src_uri = "index.md"
+    src_path = "index.md"
+
+    @property
+    def content_string(self) -> str:
+        """Raise the source read error."""
+        raise OSError("unreadable")
+
+
 def _run_case(name: str, src: str, want_warns: int) -> bool:
     """Pass one page through the hook and compare the warning count."""
     # git-revision-date-localized fills page.meta before hooks run.
+    file = (
+        _UnreadableFile()
+        if name == "file unreadable"
+        else types.SimpleNamespace(
+            src_uri="index.md", src_path="index.md", content_string=src
+        )
+    )
     page = types.SimpleNamespace(
         meta={"git_revision_date_localized": "2026-11-18"},
-        file=types.SimpleNamespace(src_uri="index.md", src_path="index.md"),
+        file=file,
     )
+    markdown = get_data(src)[0]
     logger = logging.getLogger("mkdocs.hooks.front_matter")
     handler = _ListHandler()
     logger.addHandler(handler)
     try:
-        out = MOD.on_page_markdown(src, page, {}, None)
+        out = MOD.on_page_markdown(markdown, page, {}, None)
     finally:
         logger.removeHandler(handler)
-    ok = out == src and len(handler.messages) == want_warns
-    detail = "" if ok else f"-> warns={handler.messages!r} changed={out != src}"
+    ok = out == markdown and len(handler.messages) == want_warns
+    detail = "" if ok else f"-> warns={handler.messages!r} changed={out != markdown}"
     print("ok  " if ok else "FAIL", name, detail)
     return ok
 

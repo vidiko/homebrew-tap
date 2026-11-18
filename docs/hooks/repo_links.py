@@ -1,19 +1,18 @@
 # SPDX-FileCopyrightText: 2026 Lusoris <lusoris@pm.me>
 # SPDX-License-Identifier: EUPL-1.2
-"""MkDocs hook that rewrites relative links leaving docs/ to repository URLs.
+"""Rewrite relative links leaving docs/ to repository URLs."""
 
-In on_config, the hook reads the repository's tracked files with git ls-files -z
-and registers a Python-Markdown treeprocessor at priority 15 (after inline link
-parsing at priority 20, before MkDocs' relative-path validator at priority 0).
-In on_page_markdown, the hook records the active page URI on the extension. The
-treeprocessor handles relative anchor hrefs that leave docs/ (including ``..``):
-links that step back into docs/ are rewritten to page-relative paths so MkDocs
-validates the target and any heading anchor; links to the repository root
-(``repo_path == "."``) rewrite to the forge tree base URL; links to tracked
-files or directories outside docs/ rewrite to forge blob or tree URLs; and links
-that escape above the repository root or target an untracked repository path log
-a warning so ``mkdocs build --strict`` fails.
-"""
+# In on_config, the hook reads the repository's tracked files with git ls-files -z
+# and registers a Python-Markdown treeprocessor at priority 15 (after inline link
+# parsing at priority 20, before MkDocs' relative-path validator at priority 0).
+# In on_page_markdown, the hook records the active page URI on the extension. The
+# treeprocessor handles relative anchor hrefs that leave docs/ (including ``..``):
+# links that step back into docs/ are rewritten to page-relative paths so MkDocs
+# validates the target and any heading anchor; links to the repository root
+# (``repo_path == "."``) rewrite to the forge tree base URL; links to tracked
+# files or directories outside docs/ rewrite to forge blob or tree URLs; and links
+# that escape above the repository root or target an untracked repository path log
+# a warning so ``mkdocs build --strict`` fails.
 
 from __future__ import annotations
 
@@ -21,7 +20,7 @@ import logging
 import os
 import posixpath
 import shutil
-import subprocess
+import subprocess  # nosec B404  # Fixed git argv, no shell.
 import urllib.parse
 from collections.abc import Iterable, Mapping
 from pathlib import Path, PurePosixPath
@@ -34,7 +33,8 @@ from mkdocs.exceptions import PluginError
 
 if TYPE_CHECKING:
     # Type only: Python-Markdown builds the element tree; the hook parses no XML.
-    from xml.etree.ElementTree import Element
+    # nosemgrep: use-defused-xml  # Type annotation only.
+    from xml.etree.ElementTree import Element  # nosec B405  # Type annotation only.
 
 _LOG = logging.getLogger("mkdocs.hooks.repo_links")
 
@@ -54,7 +54,8 @@ def _tracked_files(repo_root: Path) -> frozenset[str]:
     if git is None:
         raise PluginError("repo_links: git is not on PATH")
     try:
-        proc = subprocess.run(
+        # nosemgrep: dangerous-subprocess-use-audit  # Fixed git argv.
+        proc = subprocess.run(  # nosec B603  # Resolved git, fixed argv, no shell or input.
             [git, "ls-files", "-z"],
             cwd=repo_root,
             capture_output=True,

@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: EUPL-1.2
 #
 # Build the MkDocs site under --strict on every pull request and every push to
-# main, and deploy it to GitHub Pages from main. Runs on main go one at a time,
-# and a run deploys only while its commit is still the tip of main, so an older
-# build never replaces a newer site. Pushes to main are not path-filtered: the
-# link hook checks every tracked file, and the tip check skips a deploy
-# whenever main moved, so every push to main needs a run of its own.
+# main, and deploy it to GitHub Pages from main. Builds for main run in
+# parallel; deploys run one at a time, and each deploys only while its commit
+# is still the tip of main, so an older build never replaces a newer site.
+# Pushes to main are not path-filtered: the link hook checks every tracked
+# file, so every push to main needs a build of its own.
 name: Docs
 
 'on':
@@ -20,12 +20,13 @@ name: Docs
 permissions:
   contents: read
 
-# One group per pull request (a newer push cancels the older run) and one per
-# branch: runs on main queue behind each other and are never cancelled.
+# One group per pull request (a newer push cancels the older run). Every push
+# or dispatch gets a group of its own, so runs on main neither wait for nor
+# cancel each other; the deploy job orders them.
 concurrency:
   group: >-
     ${{ github.workflow }}-${{ github.event.pull_request.number ||
-    github.ref }}
+    github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -36,8 +37,6 @@ jobs:
     permissions:
       contents: read
       pages: read
-    outputs:
-      superseded: ${{ steps.tip.outputs.superseded }}
     steps:
       - name: Stop on a draft pull request
         if: github.event.pull_request.draft == true
@@ -68,6 +67,7 @@ jobs:
         run: |
           "$RUNNER_TEMP/docs/bin/python" -I -B docs/hooks/test_repo_links.py .
           "$RUNNER_TEMP/docs/bin/python" -I -B docs/hooks/test_front_matter.py .
+          "$RUNNER_TEMP/docs/bin/python" -I -B docs/hooks/test_suppressions.py .
       - name: Configure Pages
         id: pages
         if: >-
@@ -90,24 +90,6 @@ jobs:
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
         with:
           path: site
-      - name: Check that the commit is still the tip of main
-        id: tip
-        if: >-
-          (github.event_name == 'push' ||
-          github.event_name == 'workflow_dispatch') &&
-          github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          ref="repos/$GITHUB_REPOSITORY/git/ref/heads/main"
-          tip=$(timeout 60 gh api "$ref" --jq .object.sha)
-          if [ "$tip" = "$GITHUB_SHA" ]; then
-            echo "superseded=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice title=Deploy skipped::main moved from" \
-              "$GITHUB_SHA to $tip; the run for the newer commit deploys."
-            echo "superseded=true" >> "$GITHUB_OUTPUT"
-          fi
 
   deploy:
     name: Docs deploy
@@ -115,21 +97,42 @@ jobs:
     if: >-
       (github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/main' &&
-      needs.build.outputs.superseded == 'false'
+      github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
+      contents: read
       pages: write
+      # nosemgrep: hard-coded-tokens  # deploy-pages needs OIDC permission.
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    # Deploys run one at a time and are never cancelled. queue: max keeps up
+    # to 100 waiting deploys in order instead of replacing the waiting one.
     concurrency:
       group: pages
       cancel-in-progress: false
+      queue: max
     steps:
+      # Runs inside the serialized pages group right before the deploy, so a
+      # re-run of an older deploy job also skips once main has moved on.
+      - name: Check that the commit is still the tip of main
+        id: tip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ref="repos/$GITHUB_REPOSITORY/git/ref/heads/main"
+          tip=$(timeout 60 gh api "$ref" --jq .object.sha)
+          if [ "$tip" = "$GITHUB_SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=Deploy skipped::main moved from" \
+              "$GITHUB_SHA to $tip; the run for the newer commit deploys."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Deploy to GitHub Pages
         id: deployment
+        if: steps.tip.outputs.current == 'true'
         # yamllint disable-line rule:line-length
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1

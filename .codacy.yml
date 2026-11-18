@@ -1,0 +1,10 @@
+---
+# SPDX-FileCopyrightText: 2026 Lusoris <lusoris@pm.me>
+# SPDX-License-Identifier: EUPL-1.2
+# docs/requirements.txt is a hash-pinned lockfile from uv pip compile, which
+# Lizard measures as code. Regenerate it with the command in its header, never
+# by hand. Every other analysis tool still reads the file.
+engines:
+  lizard:
+    exclude_paths:
+      - "docs/requirements.txt"
